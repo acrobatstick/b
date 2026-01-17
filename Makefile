@@ -3,9 +3,9 @@ APP_NAME := $(notdir $(CURDIR))
 CSS_IN  := static/css/style.css
 CSS_OUT := dist/static/css/tailwind.css
 
-.PHONY: run clean
+.PHONY: build clean
 
-run:
+build:
 	rm -rf dist/*
 
 	pnpm exec tailwindcss -i $(CSS_IN) -o $(CSS_OUT) -m
