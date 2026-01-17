@@ -6,24 +6,17 @@ templ headerComponent(title string) {
 	</head>
 }
 
-templ contentLayout(body templ.Component) {
-	<body>
-		@body
-	</body>
-}
-
-templ Layout(title string, body templ.Component) {
+templ Layout(title string, childrens ...templ.Component) {
+	<!DOCTYPE html>
 	<html>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		@headerComponent(title)
+		<link href="/static/css/tailwind.css" rel="stylesheet"/>
 		<body>
-			@body
+			for _, children := range childrens {
+				@children
+			}
 		</body>
-	</html>
-}
-
-templ ArticlePage(title string, content templ.Component) {
-	<html>
-		@headerComponent(title)
-		@contentLayout(content)
 	</html>
 }

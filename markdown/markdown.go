@@ -17,16 +17,15 @@ import (
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/gosimple/slug"
-	"github.com/yosssi/gohtml"
 )
 
 type Document struct {
-	Title       string    `yaml:"title"`
-	Date        time.Time `yaml:"date"`
-	Slug        string    `yaml:"slug"`
-	RawMarkdown []byte
-	htmlBuf     bytes.Buffer
-	path        string
+	Title         string    `yaml:"title"`
+	DatePublished time.Time `yaml:"date"`
+	Slug          string    `yaml:"slug"`
+	RawMarkdown   []byte
+	htmlBuf       bytes.Buffer
+	path          string
 }
 
 func Read(p string) (*Document, error) {
@@ -54,19 +53,18 @@ func (d *Document) WriteIntoHTML() error {
 	basename := strings.TrimSuffix(path.Base(d.path), path.Ext(d.path))
 	content := string(parseToHTML(d.RawMarkdown))
 	var buf bytes.Buffer
-	err := components.ArticlePage(basename, toTempl(content)).Render(context.Background(), &buf)
+	err := components.Layout(d.Title, toTempl(content)).Render(context.Background(), &buf)
 	if err != nil {
 		return err
 	}
 
-	dir := path.Join("public", d.Date.Format("2006/01"))
+	dir := path.Join("dist", "article", d.DatePublished.Format("2006/01"))
 	if err := os.MkdirAll(dir, 0777); err != nil {
 		return fmt.Errorf("mkdir %q failed for article %q: %w", dir, basename, err)
 	}
 
-	formatted := gohtml.FormatBytes(buf.Bytes())
 	outPath := path.Join(dir, d.Slug+".html")
-	err = os.WriteFile(outPath, formatted, 0644)
+	err = os.WriteFile(outPath, buf.Bytes(), 0644)
 	if err != nil {
 		return fmt.Errorf("writefile to %q: %w", outPath, err)
 	}

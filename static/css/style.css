@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+	font-family: "Departure Mono";
+	src: url("/static/font/DepartureMono-Regular.woff2") format("woff2");
+	font-feature-settings: "locl";
+}
+
+:root {
+  font-family: "Departure Mono", monospace;
+}
