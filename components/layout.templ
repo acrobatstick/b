@@ -1,0 +1,29 @@
+package components
+
+templ headerComponent(title string) {
+	<head>
+		<title>{ title }</title>
+	</head>
+}
+
+templ contentLayout(body templ.Component) {
+	<body>
+		@body
+	</body>
+}
+
+templ Layout(title string, body templ.Component) {
+	<html>
+		@headerComponent(title)
+		<body>
+			@body
+		</body>
+	</html>
+}
+
+templ ArticlePage(title string, content templ.Component) {
+	<html>
+		@headerComponent(title)
+		@contentLayout(content)
+	</html>
+}
