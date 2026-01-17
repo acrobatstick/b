@@ -1,30 +1,80 @@
 package markdown
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
 	"os"
+	"path"
+	"strings"
 	"time"
 
+	"github.com/a-h/templ"
+	"github.com/acrobatstick/acrobatstick.github.io/components"
+	"github.com/adrg/frontmatter"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/gosimple/slug"
+	"github.com/yosssi/gohtml"
 )
 
 type Document struct {
-	Title   string
-	RawHTML []byte
-	Date    time.Time
+	Title       string    `yaml:"title"`
+	Date        time.Time `yaml:"date"`
+	Slug        string    `yaml:"slug"`
+	RawMarkdown []byte
+	htmlBuf     bytes.Buffer
+	path        string
 }
 
-func Read(p string) ([]byte, error) {
-	// TODO: get the file creation date to order the blog list later
+func Read(p string) (*Document, error) {
+	doc := new(Document)
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, err
 	}
-	return b, nil
+	r := bytes.NewReader(b)
+	rest, err := frontmatter.Parse(r, &doc)
+	if err != nil {
+		return nil, err
+	}
+	if len(doc.Slug) == 0 {
+		basename := strings.TrimSuffix(path.Base(p), path.Ext(p))
+		s := slug.Make(basename)
+		doc.Slug = s
+	}
+	doc.RawMarkdown = rest
+	doc.path = p
+	return doc, nil
 }
 
-func RenderToHTML(md []byte) []byte {
+func (d *Document) WriteIntoHTML() error {
+	basename := strings.TrimSuffix(path.Base(d.path), path.Ext(d.path))
+	content := string(parseToHTML(d.RawMarkdown))
+	var buf bytes.Buffer
+	err := components.ArticlePage(basename, toTempl(content)).Render(context.Background(), &buf)
+	if err != nil {
+		return err
+	}
+
+	dir := path.Join("public", d.Date.Format("2006/01"))
+	if err := os.MkdirAll(dir, 0777); err != nil {
+		return fmt.Errorf("mkdir %q failed for article %q: %w", dir, basename, err)
+	}
+
+	formatted := gohtml.FormatBytes(buf.Bytes())
+	outPath := path.Join(dir, d.Slug+".html")
+	err = os.WriteFile(outPath, formatted, 0644)
+	if err != nil {
+		return fmt.Errorf("writefile to %q: %w", outPath, err)
+	}
+
+	return nil
+}
+
+func parseToHTML(md []byte) []byte {
 	// create markdown parser with extensions
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
 	p := parser.NewWithExtensions(extensions)
@@ -36,4 +86,11 @@ func RenderToHTML(md []byte) []byte {
 	renderer := html.NewRenderer(opts)
 
 	return markdown.Render(doc, renderer)
+}
+
+func toTempl(content string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+		_, err = io.WriteString(w, content)
+		return
+	})
 }
